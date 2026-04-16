@@ -18,6 +18,8 @@ function App() {
   const [serverStatus, setServerStatus] = useState<'checking' | 'up' | 'down'>('checking');
   const [links, setLinks] = useState<Link[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [linkSearch, setLinkSearch] = useState('');
+  const [linkSort, setLinkSort] = useState<'recent' | 'clicks'>('recent');
 
   useEffect(() => {
     checkServerHealth();
@@ -448,6 +450,34 @@ function App() {
           {/* Links Tab */}
           {activeTab === 'links' && (
             <div className="links-section">
+              {/* Search and Sort Controls */}
+              <div className="links-controls">
+                <div className="links-search">
+                  <span className="links-search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search links..."
+                    value={linkSearch}
+                    onChange={(e) => setLinkSearch(e.target.value)}
+                  />
+                </div>
+                <div className="links-sort">
+                  <button
+                    className={`sort-btn ${linkSort === 'recent' ? 'active' : ''}`}
+                    onClick={() => setLinkSort('recent')}
+                  >
+                    🕐 Recent
+                  </button>
+                  <button
+                    className={`sort-btn ${linkSort === 'clicks' ? 'active' : ''}`}
+                    onClick={() => setLinkSort('clicks')}
+                  >
+                    📊 Most Clicks
+                  </button>
+                </div>
+              </div>
+
+              {/* Links Grid */}
               {links.length === 0 ? (
                 <div className="card empty-state">
                   <div className="empty-icon">🔗</div>
@@ -456,47 +486,72 @@ function App() {
                 </div>
               ) : (
                 <div className="links-grid">
-                  {links.map((link) => (
-                    <div key={link.linkId} className="link-card">
-                      <div className="link-card-header">
-                        <div className="link-info">
-                          <code className="link-id">{link.linkId.slice(0, 16)}</code>
-                          <span className="link-clicks">{link.clickCount || 0} clicks</span>
+                  {links
+                    .filter(link =>
+                      link.linkId.toLowerCase().includes(linkSearch.toLowerCase()) ||
+                      link.targetUrl.toLowerCase().includes(linkSearch.toLowerCase())
+                    )
+                    .sort((a, b) => {
+                      if (linkSort === 'clicks') {
+                        return (b.clickCount || 0) - (a.clickCount || 0);
+                      }
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    })
+                    .map((link) => (
+                      <div key={link.linkId} className="link-card">
+                        <div className="link-card-header">
+                          <div>
+                            <div className="link-id-badge">
+                              <span className="link-id-icon">🔗</span>
+                              <code>{link.linkId.slice(0, 16)}...</code>
+                            </div>
+                            <div className="link-stats-row">
+                              <div className="link-stat">
+                                <span className="link-stat-value">{link.clickCount || 0}</span>
+                                <span className="link-stat-label">Clicks</span>
+                              </div>
+                              <div className="link-stat">
+                                <span className="link-stat-value">{formatDate(link.createdAt).split(',')[0]}</span>
+                                <span className="link-stat-label">Created</span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => deleteLink(link.linkId, e)}
+                            className="link-delete-btn"
+                            disabled={deleting === link.linkId}
+                            title="Delete link"
+                          >
+                            {deleting === link.linkId ? '...' : '🗑️'}
+                          </button>
                         </div>
-                        <button
-                          onClick={(e) => deleteLink(link.linkId, e)}
-                          className="delete-btn"
-                          disabled={deleting === link.linkId}
-                        >
-                          {deleting === link.linkId ? '...' : '🗑️'}
-                        </button>
-                      </div>
-                      <div className="link-card-body">
-                        <div className="link-row">
-                          <span className="link-label">Created</span>
-                          <span className="link-value">{formatDate(link.createdAt)}</span>
+                        <div className="link-card-body">
+                          <div className="link-row">
+                            <span className="link-label">🌐 Target URL</span>
+                            <span className="link-value target" title={link.targetUrl}>{link.targetUrl}</span>
+                          </div>
+                          <div className="link-tracking-url">
+                            <code title={`${window.location.origin}/t/${link.linkId}`}>
+                              {`${window.location.origin}/t/${link.linkId}`}
+                            </code>
+                          </div>
                         </div>
-                        <div className="link-row">
-                          <span className="link-label">Target</span>
-                          <span className="link-value target" title={link.targetUrl}>{link.targetUrl}</span>
+                        <div className="link-card-footer">
+                          <button
+                            onClick={() => copyToClipboard(`${window.location.origin}/t/${link.linkId}`)}
+                            className="copy-link-btn"
+                          >
+                            📋 Copy
+                          </button>
+                          <button
+                            onClick={() => { setSelectedLinkId(link.linkId); setActiveTab('stats'); fetchStats(link.linkId); }}
+                            className="view-stats-btn"
+                          >
+                            📊 View Stats
+                          </button>
                         </div>
                       </div>
-                      <div className="link-card-footer">
-                        <button
-                          onClick={() => copyToClipboard(`${window.location.origin}/t/${link.linkId}`)}
-                          className="copy-link-btn"
-                        >
-                          📋 Copy Link
-                        </button>
-                        <button
-                          onClick={() => { setSelectedLinkId(link.linkId); setActiveTab('stats'); fetchStats(link.linkId); }}
-                          className="view-stats-btn"
-                        >
-                          📊 Stats
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>

