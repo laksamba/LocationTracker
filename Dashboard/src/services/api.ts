@@ -37,6 +37,14 @@ export interface Click {
   utmContent: string;
 }
 
+export interface Link {
+  _id: string;
+  linkId: string;
+  targetUrl: string;
+  clickCount: number;
+  createdAt: string;
+}
+
 export interface CreateLinkResponse {
   error: string;
   success: boolean;
@@ -55,6 +63,11 @@ export interface ClicksResponse {
     limit: number;
     skip: number;
   };
+}
+
+export interface LinksResponse {
+  success: boolean;
+  data: Link[];
 }
 
 export interface LinkStats {
@@ -97,8 +110,20 @@ export const api = {
     return res.json();
   },
 
+  async getLinks(): Promise<LinksResponse> {
+    const res = await fetch(`${API_BASE}/dashboard/links`);
+    return res.json();
+  },
+
   async getLinkStats(linkId: string): Promise<{ success: boolean; data: { linkId: string; stats: LinkStats } }> {
     const res = await fetch(`${API_BASE}/dashboard/link/${linkId}/stats`);
+    return res.json();
+  },
+
+  async deleteClick(clickId: string): Promise<{ success: boolean; deleted: number }> {
+    const res = await fetch(`${API_BASE}/dashboard/click/${clickId}`, {
+      method: 'DELETE',
+    });
     return res.json();
   },
 

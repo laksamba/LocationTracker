@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { api, type Click, type LinkStats } from './services/api';
+import { api, type Click, type LinkStats, type Link } from './services/api';
 import './App.css';
 
-type Tab = 'create' | 'clicks' | 'stats';
+type Tab = 'create' | 'clicks' | 'stats' | 'links';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('create');
@@ -16,6 +16,8 @@ function App() {
   const [linkStats, setLinkStats] = useState<LinkStats | null>(null);
   const [copied, setCopied] = useState(false);
   const [serverStatus, setServerStatus] = useState<'checking' | 'up' | 'down'>('checking');
+  const [links, setLinks] = useState<Link[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     checkServerHealth();
@@ -75,6 +77,17 @@ function App() {
     }
   };
 
+  const fetchLinks = async () => {
+    try {
+      const res = await api.getLinks();
+      if (res.success) {
+        setLinks(res.data);
+      }
+    } catch {
+      console.error('Failed to fetch links');
+    }
+  };
+
   const handleLinkClick = (click: Click) => {
     setSelectedLinkId(click.linkId);
     setActiveTab('stats');
@@ -91,6 +104,37 @@ function App() {
     return new Date(dateStr).toLocaleString('en-US', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
+  };
+
+  const deleteClick = async (clickId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this click record?')) return;
+    setDeleting(clickId);
+    try {
+      await api.deleteClick(clickId);
+      setClicks(clicks.filter(c => c.clickId !== clickId));
+      setTotalClicks(t => t - 1);
+    } catch {
+      console.error('Failed to delete click');
+    }
+    setDeleting(null);
+  };
+
+  const deleteLink = async (linkId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this link and ALL its clicks?')) return;
+    setDeleting(linkId);
+    try {
+      await api.deleteLink(linkId);
+      setLinks(links.filter(l => l.linkId !== linkId));
+      if (selectedLinkId === linkId) {
+        setSelectedLinkId(null);
+        setActiveTab('clicks');
+      }
+    } catch {
+      console.error('Failed to delete link');
+    }
+    setDeleting(null);
   };
 
   return (
@@ -116,6 +160,13 @@ function App() {
           >
             <span className="nav-icon">📋</span>
             All Clicks
+          </button>
+          <button
+            onClick={() => { setActiveTab('links'); fetchLinks(); }}
+            className={`nav-item ${activeTab === 'links' ? 'active' : ''}`}
+          >
+            <span className="nav-icon">🔗</span>
+            Links
           </button>
           {selectedLinkId && (
             <button
@@ -145,11 +196,13 @@ function App() {
               {activeTab === 'create' && 'Create Tracking Link'}
               {activeTab === 'clicks' && 'Click Analytics'}
               {activeTab === 'stats' && 'Link Statistics'}
+              {activeTab === 'links' && 'Manage Links'}
             </h1>
             <p className="page-subtitle">
               {activeTab === 'create' && 'Generate a new tracking link for your campaign'}
               {activeTab === 'clicks' && `${totalClicks} total clicks recorded`}
               {activeTab === 'stats' && `Analyzing link ${selectedLinkId?.slice(0, 12)}...`}
+              {activeTab === 'links' && `${links.length} tracking links`}
             </p>
           </div>
           {activeTab === 'clicks' && clicks.length > 0 && (
@@ -273,6 +326,13 @@ function App() {
                       </div>
                       <div className="click-card-footer">
                         <span className="click-target" title={click.targetUrl}>→ {click.targetUrl}</span>
+                        <button
+                          onClick={(e) => deleteClick(click.clickId, e)}
+                          className="delete-btn"
+                          disabled={deleting === click.clickId}
+                        >
+                          {deleting === click.clickId ? '...' : '🗑️'}
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -382,6 +442,63 @@ function App() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Links Tab */}
+          {activeTab === 'links' && (
+            <div className="links-section">
+              {links.length === 0 ? (
+                <div className="card empty-state">
+                  <div className="empty-icon">🔗</div>
+                  <h3>No Links Yet</h3>
+                  <p>Create a tracking link to get started</p>
+                </div>
+              ) : (
+                <div className="links-grid">
+                  {links.map((link) => (
+                    <div key={link.linkId} className="link-card">
+                      <div className="link-card-header">
+                        <div className="link-info">
+                          <code className="link-id">{link.linkId.slice(0, 16)}</code>
+                          <span className="link-clicks">{link.clickCount || 0} clicks</span>
+                        </div>
+                        <button
+                          onClick={(e) => deleteLink(link.linkId, e)}
+                          className="delete-btn"
+                          disabled={deleting === link.linkId}
+                        >
+                          {deleting === link.linkId ? '...' : '🗑️'}
+                        </button>
+                      </div>
+                      <div className="link-card-body">
+                        <div className="link-row">
+                          <span className="link-label">Created</span>
+                          <span className="link-value">{formatDate(link.createdAt)}</span>
+                        </div>
+                        <div className="link-row">
+                          <span className="link-label">Target</span>
+                          <span className="link-value target" title={link.targetUrl}>{link.targetUrl}</span>
+                        </div>
+                      </div>
+                      <div className="link-card-footer">
+                        <button
+                          onClick={() => copyToClipboard(`${window.location.origin}/t/${link.linkId}`)}
+                          className="copy-link-btn"
+                        >
+                          📋 Copy Link
+                        </button>
+                        <button
+                          onClick={() => { setSelectedLinkId(link.linkId); setActiveTab('stats'); fetchStats(link.linkId); }}
+                          className="view-stats-btn"
+                        >
+                          📊 Stats
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
