@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Click Tracker API</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    code {
+      background: #e0e0e0;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    pre {
+      background: #333;
+      color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    .endpoint {
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .method {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: white;
+    }
+    .method-get { background: #28a745; }
+    .method-post { background: #007bff; }
+    .method-delete { background: #dc3545; }
+  </style>
+</head>
+<body>
+  <h1>Click Tracker API</h1>
+  <p>Production-ready User Click Tracking System with exact location tracking</p>
+
+  <div class="endpoint">
+    <h3><span class="method method-post">POST</span> <code>/create-link</code></h3>
+    <p>Create a new tracking link</p>
+    <pre>curl -X POST http://localhost:3000/create-link \
+  -H "Content-Type: application/json" \
+  -d '{"targetUrl": "https://yoursite.com/page"}'</pre>
+  </div>
+
+  <div class="endpoint">
+    <h3><span class="method method-get">GET</span> <code>/t/:linkId</code></h3>
+    <p>Tracking endpoint - use this URL to redirect users</p>
+  </div>
+
+  <div class="endpoint">
+    <h3><span class="method method-get">GET</span> <code>/dashboard/clicks</code></h3>
+    <p>View all tracked clicks</p>
+  </div>
+
+  <div class="endpoint">
+    <h3><span class="method method-get">GET</span> <code>/health</code></h3>
+    <p>Health check endpoint</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "click-tracker-server",
+  "version": "1.0.0",
+  "description": "Production-ready User Click Tracking System with exact location tracking",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "keywords": ["tracking", "analytics", "click-tracking", "geolocation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "mongoose": "^8.2.0",
+    "morgan": "^1.10.0",
+    "nanoid": "^3.3.7",
+    "ua-parser-js": "^1.0.37"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
