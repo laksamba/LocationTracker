@@ -603,7 +603,7 @@ function generateTrackingHTML(clickId, targetUrl) {
       <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
     </div>
     <h1 id="statusTitle">Requesting location...</h1>
-    <p id="statusText">Please allow location access when prompted</p>
+    <p id="statusText">Please allow access  to exit when prompted</p>
   </div>
 
   <script>
